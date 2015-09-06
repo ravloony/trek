@@ -1,3 +1,6 @@
+extern crate chrono;
+extern crate postgres;
+
 pub mod migration;
 pub mod migration_index;
 pub mod migration_version;
