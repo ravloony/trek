@@ -1,0 +1,13 @@
+[package]
+name = "trek"
+version = "0.1.0"
+authors = ["Brent Houghton <brent@slixbits.com>"]
+description = "Database migration management for Rust programs"
+readme = "readme.md"
+keywords = ["database", "migration"]
+license = "MIT"
+repository = "https://github.com/starim/trek"
+
+[dependencies]
+chrono = "0.2.16"
+postgres = "0.9.6"
