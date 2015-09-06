@@ -1,7 +1,6 @@
 pub mod migration;
 pub mod migration_index;
 pub mod migration_version;
-pub mod migration_20150826001350_base_migration;
 
 use std::fs::File;
 use std::io::{self, Read, Write};

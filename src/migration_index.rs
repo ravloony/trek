@@ -4,7 +4,6 @@ use postgres;
 
 use super::migration::Migration;
 use super::migration_version::MigrationVersion;
-use super::migration_20150826001350_base_migration::BaseMigration;
 
 
 /// Tracks and manages database migrations for this system.
@@ -213,16 +212,5 @@ impl MigrationIndex {
             }
         }
         Ok(())
-    }
-}
-
-impl Default for MigrationIndex {
-    fn default() -> MigrationIndex {
-        MigrationIndex {
-            // record your migrations here
-            migrations: vec![
-                Box::new(BaseMigration::new())
-            ]
-        }
     }
 }
