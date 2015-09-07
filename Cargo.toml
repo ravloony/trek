@@ -8,6 +8,10 @@ keywords = ["database", "migration"]
 license = "MIT"
 repository = "https://github.com/starim/trek"
 
+[[test]]
+name = "test"
+path = "tests/test.rs"
+
 [dependencies]
 chrono = "0.2.16"
 postgres = "0.9.6"
