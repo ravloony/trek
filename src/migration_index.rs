@@ -123,6 +123,29 @@ impl MigrationIndex {
         Ok(())
     }
 
+    /// Takes a queryable connection object and returns the current version of the database's
+    /// schema. Returns an error if the queries it runs against the database fail.
+    pub fn schema_version<T: postgres::GenericConnection>(connection: &T) -> postgres::Result<Option<MigrationVersion>> {
+        let prepared_stmt = try!(connection.prepare(
+            "SELECT column_name FROM information_schema.columns
+            WHERE table_name=$1 LIMIT 1"
+        ));
+        let result = try!(prepared_stmt.query(&[&"schema_migrations"]));
+        match result.len() {
+            0 => Ok(None),
+            1 => {
+                let version_string: postgres::Result<String> = result.get(0).get_opt(0);
+                version_string.map(|version_string| {
+                    Some(MigrationVersion::from_rfc3339_string(&version_string).unwrap())
+                })
+            },
+            _ => panic!(
+                    "Failed to retrieve current database schema version. The query to get column name \
+                    for version tracking table returned multiple rows."
+            )
+        }
+    }
+
     /// Takes the current version of the database's schema and returns a slice containing all
     /// migrations not yet applied to the database, in order from first to last.
     fn outstanding_migrations(&self, current_version: Option<MigrationVersion>) -> &[Box<Migration>] {
@@ -148,29 +171,6 @@ impl MigrationIndex {
         self.migrations.iter().position(|ref migration| {
             migration.version() == *current_version
         })
-    }
-
-    /// Takes a queryable connection object and returns the current version of the database's
-    /// schema. Returns an error if the queries it runs against the database fail.
-    fn schema_version<T: postgres::GenericConnection>(connection: &T) -> postgres::Result<Option<MigrationVersion>> {
-        let prepared_stmt = try!(connection.prepare(
-            "SELECT column_name FROM information_schema.columns
-            WHERE table_name=$1 LIMIT 1"
-        ));
-        let result = try!(prepared_stmt.query(&[&"schema_migrations"]));
-        match result.len() {
-            0 => Ok(None),
-            1 => {
-                let version_string: postgres::Result<String> = result.get(0).get_opt(0);
-                version_string.map(|version_string| {
-                    Some(MigrationVersion::from_rfc3339_string(&version_string).unwrap())
-                })
-            },
-            _ => panic!(
-                    "Failed to retrieve current database schema version. The query to get column name \
-                    for version tracking table returned multiple rows."
-            )
-        }
     }
 
     /// Takes a queryable connection object and uses it to record a new schema version in the
