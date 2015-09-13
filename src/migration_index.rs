@@ -1,9 +1,12 @@
 use std::vec::Vec;
 
-use postgres;
+use postgres::{self, GenericConnection};
 
+use super::error::Error;
 use super::migration::Migration;
 use super::migration_version::MigrationVersion;
+
+use super::Result;
 
 
 /// Tracks and manages database migrations for this system.
@@ -47,23 +50,36 @@ impl MigrationIndex {
     /// }
     ///
     /// ```
-    pub fn run<T: postgres::GenericConnection>(&self, connection: &T) {
-        let mut schema_version = MigrationIndex::schema_version(connection);
-        for migration in self.outstanding_migrations(schema_version).iter() {
-            let result = MigrationIndex::update_schema_version(
-                connection, schema_version, Some(migration.version())
-            );
-            if result.is_err() {
-                panic!(
-                    "Failed to update schema version table: {}",
-                    result.err().unwrap().to_string()
-                );
+    pub fn run(&self, connection: &GenericConnection) -> Result<()> {
+        let mut schema_version = match MigrationIndex::schema_version(connection) {
+            Ok(schema_version_option) => schema_version_option,
+            Err(error) => {
+                return Err(Error::new(
+                    "Error reading current schema version".to_owned(),
+                    error
+                ));
             }
-            migration.up(connection);
+        };
+        for migration in self.outstanding_migrations(schema_version).iter() {
+            if let Err(error) = MigrationIndex::update_schema_version(
+                connection, schema_version, Some(migration.version())
+            ) {
+                return Err(Error::new(
+                    "Error updating schema version".to_owned(),
+                    error
+                ));
+            }
+            if let Err(error) = migration.up(connection) {
+                return Err(Error::new(
+                    format!("Error applying migration {}", migration),
+                    error
+                ));
+            }
             schema_version = Some(migration.version());
 
-            println!("Ran migration {}", migration.to_string());
+            println!("Ran migration {}", migration);
         };
+        Ok(())
     }
 
     /// Rolls back the last database migration that was successfully applied to the database.
@@ -93,66 +109,100 @@ impl MigrationIndex {
     /// }
     ///
     /// ```
-    pub fn rollback<T: postgres::GenericConnection>(&self, connection: &T) {
-        let old_schema_version = MigrationIndex::schema_version(connection);
-        if old_schema_version.is_none() {
-            println!("No database migrations applied, no rollback necessary.");
-            return;
-        }
-        let old_schema_version = old_schema_version.unwrap();
+    pub fn rollback(&self, connection: &GenericConnection) -> Result<()> {
+        let old_schema_version = match MigrationIndex::schema_version(connection) {
+            Ok(schema_version_option) => schema_version_option,
+            Err(error) => {
+                return Err(Error::new(
+                    "Failed to get current database schema version".to_owned(),
+                    error
+                ))
+            }
+        };
+        let old_schema_version = match old_schema_version {
+            Some(schema_version) => schema_version,
+            None => {
+                // if there's nothing to roll back, this function call is a no-op
+                return Ok(());
+            }
+        };
         let old_migration_index = self.current_index(&old_schema_version).unwrap();
         let old_migration = self.migrations.get(old_migration_index).unwrap();
         // new_migration will be None if old_migration is the very first migration
         match self.migrations.get(old_migration_index - 1) {
             Some(new_migration) => {
-                let result = MigrationIndex::update_schema_version(
+                if let Err(error) = MigrationIndex::update_schema_version(
                     connection, Some(old_migration.version()), Some(new_migration.version())
-                );
-                if result.is_err() {
-                    panic!(
-                        "Failed to update schema version table: {}",
-                        result.err().unwrap().to_string()
-                    );
+                ) {
+                    return Err(Error::new(
+                        format!(
+                            "Failed to update schema version table when rolling back migration {}",
+                            new_migration,
+                        ),
+                        error
+                    ));
                 }
-                old_migration.down(connection);
+                if let Err(error) = old_migration.down(connection) {
+                    return Err(Error::new(
+                        format!(
+                            "The down() method of database migration {} failed",
+                            old_migration,
+                        ),
+                        error
+                    ));
+                }
                 println!(
                     "Rolled back migration {}, database is now at version {}",
-                    old_migration.to_string(),
-                    new_migration.to_string()
+                    old_migration,
+                    new_migration
                 );
+                Ok(())
             }
             None => {
-                let result = MigrationIndex::update_schema_version(
+                if let Err(error) = MigrationIndex::update_schema_version(
                     connection, Some(old_migration.version()), None
-                );
-                if result.is_err() {
-                    panic!(
-                        "Failed to update schema version table: {}",
-                        result.err().unwrap().to_string()
-                    );
+                ) {
+                    return Err(Error::new(
+                        format!(
+                            "Failed to update schema version table when rolling back migration {}",
+                            old_migration,
+                        ),
+                        error
+                    ));
                 }
-                old_migration.down(connection);
+                if let Err(error) = old_migration.down(connection) {
+                    return Err(Error::new(
+                        format!(
+                            "The down() method of database migration {} failed",
+                            old_migration,
+                        ),
+                        error
+                    ));
+                }
                 println!(
                     "Rolled back migration {}, database is now empty.",
-                    old_migration.to_string()
+                    old_migration
                 );
+                Ok(())
             }
         }
     }
 
     /// Takes a queryable connection object and returns the current version of the database's
     /// schema. Panics if the queries it runs against the database fail.
-    pub fn schema_version<T: postgres::GenericConnection>(connection: &T) -> Option<MigrationVersion> {
-        let prepared_stmt = connection.prepare(
+    pub fn schema_version(
+        connection: &GenericConnection
+    ) -> postgres::Result<Option<MigrationVersion>> {
+        let prepared_stmt = try!(connection.prepare(
             "SELECT column_name FROM information_schema.columns
             WHERE table_name=$1 LIMIT 1"
-        ).unwrap();
-        let result = prepared_stmt.query(&[&"schema_migrations"]).unwrap();
+        ));
+        let result = try!(prepared_stmt.query(&[&"schema_migrations"]));
         match result.len() {
-            0 => None,
+            0 => Ok(None),
             1 => {
                 let version_string: String = result.get(0).get_opt(0).unwrap();
-                Some(MigrationVersion::from_rfc3339_string(&version_string).unwrap())
+                Ok(Some(MigrationVersion::from_rfc3339_string(&version_string).unwrap()))
             },
             _ => panic!(
                     "Failed to retrieve current database schema version. The query to get column name \
@@ -190,8 +240,8 @@ impl MigrationIndex {
 
     /// Takes a queryable connection object and uses it to record a new schema version in the
     /// database's version table.
-    fn update_schema_version<T: postgres::GenericConnection>(
-        connection: &T,
+    fn update_schema_version(
+        connection: &GenericConnection,
         old_version: Option<MigrationVersion>,
         new_version: Option<MigrationVersion>
     ) -> postgres::Result<()> {
@@ -213,13 +263,15 @@ impl MigrationIndex {
                         );",
                         &new_version
                     ),
-                    &[])
-                );
+                    &[]
+                ));
             },
             (Some(_old_version), None) => {
                 try!(connection.execute("DROP TABLE schema_version;", &[]));
             },
             (None, None) => {
+                // technically going from no database schema to no database schema is a no-op, but
+                // it probably indicates a bug so panic on this questionable input
                 panic!(
                     "Can't update schema version: at least one of old_version and new_version \
                     parameters must be Some(MigrationVersion)"
