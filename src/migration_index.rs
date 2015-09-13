@@ -4,7 +4,6 @@ use postgres::{self, GenericConnection};
 
 use super::error::Error;
 use super::migration::Migration;
-use super::migration_version::MigrationVersion;
 
 use super::Result;
 
@@ -60,9 +59,9 @@ impl MigrationIndex {
                 ));
             }
         };
-        for migration in self.outstanding_migrations(schema_version).iter() {
+        for migration in self.outstanding_migrations(schema_version.clone()).iter() {
             if let Err(error) = MigrationIndex::update_schema_version(
-                connection, schema_version, Some(migration.version())
+                connection, schema_version, Some(migration.to_string())
             ) {
                 return Err(Error::new(
                     "Error updating schema version".to_owned(),
@@ -75,7 +74,7 @@ impl MigrationIndex {
                     error
                 ));
             }
-            schema_version = Some(migration.version());
+            schema_version = Some(migration.to_string());
 
             println!("Ran migration {}", migration);
         };
@@ -132,7 +131,7 @@ impl MigrationIndex {
         match self.migrations.get(old_migration_index - 1) {
             Some(new_migration) => {
                 if let Err(error) = MigrationIndex::update_schema_version(
-                    connection, Some(old_migration.version()), Some(new_migration.version())
+                    connection, Some(old_migration.to_string()), Some(new_migration.to_string())
                 ) {
                     return Err(Error::new(
                         format!(
@@ -160,7 +159,7 @@ impl MigrationIndex {
             }
             None => {
                 if let Err(error) = MigrationIndex::update_schema_version(
-                    connection, Some(old_migration.version()), None
+                    connection, Some(old_migration.to_string()), None
                 ) {
                     return Err(Error::new(
                         format!(
@@ -192,7 +191,7 @@ impl MigrationIndex {
     /// schema. Panics if the queries it runs against the database fail.
     pub fn schema_version(
         connection: &GenericConnection
-    ) -> postgres::Result<Option<MigrationVersion>> {
+    ) -> postgres::Result<Option<String>> {
         let prepared_stmt = try!(connection.prepare(
             "SELECT column_name FROM information_schema.columns
             WHERE table_name=$1 LIMIT 1"
@@ -202,7 +201,7 @@ impl MigrationIndex {
             0 => Ok(None),
             1 => {
                 let version_string: String = result.get(0).get_opt(0).unwrap();
-                Ok(Some(MigrationVersion::from_rfc3339_string(&version_string).unwrap()))
+                Ok(Some(version_string))
             },
             _ => panic!(
                     "Failed to retrieve current database schema version. The query to get column name \
@@ -213,7 +212,7 @@ impl MigrationIndex {
 
     /// Takes the current version of the database's schema and returns a slice containing all
     /// migrations not yet applied to the database, in order from first to last.
-    fn outstanding_migrations(&self, current_version: Option<MigrationVersion>) -> &[Box<Migration>] {
+    fn outstanding_migrations(&self, current_version: Option<String>) -> &[Box<Migration>] {
         match current_version {
             Some(current_version) => {
                  match self.current_index(&current_version) {
@@ -232,9 +231,9 @@ impl MigrationIndex {
     /// Takes the current version of the database's schema and returns the index of the migrations
     /// field corresponding to the last applied database migration. Returns None if no migrations
     /// have been applied to the database yet.
-    fn current_index(&self, current_version: &MigrationVersion) -> Option<usize> {
+    fn current_index(&self, current_version: &str) -> Option<usize> {
         self.migrations.iter().position(|ref migration| {
-            migration.version() == *current_version
+            migration.to_string() == *current_version
         })
     }
 
@@ -242,8 +241,8 @@ impl MigrationIndex {
     /// database's version table.
     fn update_schema_version(
         connection: &GenericConnection,
-        old_version: Option<MigrationVersion>,
-        new_version: Option<MigrationVersion>
+        old_version: Option<String>,
+        new_version: Option<String>
     ) -> postgres::Result<()> {
         match (old_version, new_version) {
             (Some(old_version), Some(new_version)) => {
@@ -273,8 +272,8 @@ impl MigrationIndex {
                 // technically going from no database schema to no database schema is a no-op, but
                 // it probably indicates a bug so panic on this questionable input
                 panic!(
-                    "Can't update schema version: at least one of old_version and new_version \
-                    parameters must be Some(MigrationVersion)"
+                    "Can't update schema version from None to None: at least one of old_version \
+                    and new_version parameters must be Some"
                 );
             }
         }

@@ -3,13 +3,13 @@ extern crate postgres;
 
 pub mod migration;
 pub mod migration_index;
-pub mod migration_version;
 
 use std::fs::File;
 use std::io::{self, Read, Write};
 use std::path::Path;
 
-use migration_version::MigrationVersion;
+use chrono::UTC;
+
 use error::Error;
 
 mod error;
@@ -31,23 +31,26 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// }
 /// ```
 pub fn create_migration(name: &str, migrations_dir: &Path) -> io::Result<String> {
-    let version = MigrationVersion::new();
-    let file_name = format!("migration_{}_{}.rs", version, name);
+    let file_name = format!("migration_{}_{}.rs", time_prefix(), name);
     let mut final_path = migrations_dir.to_path_buf();
     final_path.push(file_name.clone());
     let final_path = final_path.as_path();
     {
         let mut file = try!(File::create(final_path));
-        try!(file.write_all(migration_template(name, &file_name, &version).as_bytes()));
+        try!(file.write_all(migration_template(name, &file_name).as_bytes()));
     }
     try!(update_migration_index(&file_name, name));
     Ok(file_name)
 }
 
+fn time_prefix() -> String {
+    UTC::now().format("%Y%m%d%H%M%S").to_string()
+}
+
 /// Takes a name (e.g. "create_users_table"), a file name (e.g. "20150822_create_users_table.rs"),
 /// and the schema version for a new migration and returns a string that can be written into the
 /// new migration file to fill in all the boilerplate code a migration requires
-fn migration_template(name: &str, file_name: &str, version: &MigrationVersion) -> String {
+fn migration_template(name: &str, file_name: &str) -> String {
     // turns "my_migration" into "MyMigration"
     let capitalized_name = name.to_owned().split('_').flat_map(|word|
         word.chars().enumerate().flat_map(|input| {
@@ -69,17 +72,14 @@ use std::fmt::{{self, Display}};
 use postgres;
 
 use db::migrations::migration::Migration;
-use db::migrations::migration_version::MigrationVersion;
 
 #[derive(Debug)]
 pub struct {capitalized_name} {{
-    version: MigrationVersion,
     file_name: String,
 }}
 impl {capitalized_name} {{
     pub fn new() -> Self {{
         {capitalized_name} {{
-            version: MigrationVersion::from_rfc3339_string(\"{datetime}\").unwrap(),
             file_name: \"{file_name}\".to_owned()
         }}
     }}
@@ -94,10 +94,6 @@ impl Migration for {capitalized_name} {{
         try!(connection.execute(\"Your SQL here.\", &[]));
         Ok(())
     }}
-
-    fn version(&self) -> MigrationVersion {{
-        self.version
-    }}
 }}
 impl Display for {capitalized_name} {{
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {{
@@ -106,8 +102,7 @@ impl Display for {capitalized_name} {{
 }}
 ",
         file_name=file_name,
-        capitalized_name=capitalized_name,
-        datetime=version.serialize()
+        capitalized_name=capitalized_name
     )
 }
 
