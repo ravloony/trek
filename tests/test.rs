@@ -2,149 +2,18 @@ extern crate chrono;
 extern crate postgres;
 extern crate trek;
 
-use std::fmt::{self, Display};
 use std::env;
 
-use chrono::DateTime;
-use postgres::{Connection, GenericConnection, SslMode, Transaction};
+use postgres::{Connection, SslMode};
 
-use trek::migration::Migration;
-use trek::migration_version::MigrationVersion;
 use trek::migration_index::MigrationIndex;
 
+use self::types::good_migration_1::GoodMigration1;
+use self::types::good_migration_2::GoodMigration2;
+use self::types::good_migration_up_bad_migration_down::GoodMigrationUpBadMigrationDown;
+use self::types::bad_migration_1::BadMigration1;
 
-struct GoodMigration1 {
-    version: MigrationVersion
-}
-impl GoodMigration1 {
-    pub fn new() -> Self {
-        GoodMigration1 {
-            version: MigrationVersion::from_rfc3339_string("1992-06-02T15:30:00-08:00").unwrap()
-        }
-    }
-}
-impl Migration for GoodMigration1 {
-    fn up(&self, transaction: &GenericConnection) -> postgres::Result<()> {
-        try!(transaction.execute("CREATE TABLE data {
-            good_migration_1_ran boolean NOT NULL DEFAULT false
-        );", &[]));
-        try!(transaction.execute("INSERT INTO data (good_migration_1_ran) values (true)", &[]));
-        Ok(())
-    }
-    fn down(&self, transaction: &GenericConnection) -> postgres::Result<()> {
-        try!(transaction.execute("DROP TABLE data;", &[]));
-        Ok(())
-    }
-    fn version(&self) -> MigrationVersion {
-        self.version
-    }
-}
-impl Display for GoodMigration1 {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        write!(formatter, "{}", self.version)
-    }
-}
-
-// this migration depends on GoodMigration1 having been run
-struct GoodMigration2 {
-    version: MigrationVersion
-}
-impl GoodMigration2 {
-    pub fn new() -> Self {
-        GoodMigration2 {
-            version: MigrationVersion::from_rfc3339_string("1993-06-02T15:30:00-08:00").unwrap()
-        }
-    }
-}
-impl Migration for GoodMigration2 {
-    fn up(&self, transaction: &GenericConnection) -> postgres::Result<()> {
-        try!(transaction.execute("ALTER TABLE data {
-            ADD COLUMN good_migration_2_ran boolean NOT NULL DEFAULT false
-        );", &[]));
-        try!(transaction.execute("UPDATE data SET good_migration_2_ran = true;", &[]));
-        Ok(())
-    }
-    fn down(&self, transaction: &GenericConnection) -> postgres::Result<()> {
-        try!(transaction.execute("ALTER TABLE data {
-            DROP COLUMN good_migration_2
-        };", &[]));
-        Ok(())
-    }
-    fn version(&self) -> MigrationVersion {
-        self.version
-    }
-}
-impl Display for GoodMigration2 {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        write!(formatter, "{}", self.version)
-    }
-}
-
-// this migration has a valid up() but its down() will fail
-struct GoodMigrationUpBadMigrationDown {
-    version: MigrationVersion
-}
-impl GoodMigrationUpBadMigrationDown {
-    pub fn new() -> Self {
-        GoodMigrationUpBadMigrationDown {
-            version: MigrationVersion::from_rfc3339_string("1994-06-02T15:30:00-08:00").unwrap()
-        }
-    }
-}
-impl Migration for GoodMigrationUpBadMigrationDown {
-    fn up(&self, transaction: &GenericConnection) -> postgres::Result<()> {
-        try!(transaction.execute("CREATE TABLE independent_data {
-            good_up_bad_down_migration_ran boolean NOT NULL DEFAULT FALSE
-        };", &[]));
-        try!(transaction.execute(
-                "INSERT INTO independent_data (good_up_bad_down_migration_ran) values (true)",
-                &[]
-        ));
-        Ok(())
-    }
-    fn down(&self, transaction: &GenericConnection) -> postgres::Result<()> {
-        try!(transaction.execute("rargle blargle", &[]));
-        Ok(())
-    }
-    fn version(&self) -> MigrationVersion {
-        self.version
-    }
-}
-impl Display for GoodMigrationUpBadMigrationDown {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        write!(formatter, "{}", self.version)
-    }
-}
-
-// this migration is expected to fail when run
-struct BadMigration1 {
-    version: MigrationVersion
-}
-impl BadMigration1 {
-    pub fn new() -> Self {
-        BadMigration1 {
-            version: MigrationVersion::from_rfc3339_string("1995-06-02T15:30:00-08:00").unwrap()
-        }
-    }
-}
-impl Migration for BadMigration1 {
-    fn up(&self, transaction: &GenericConnection) -> postgres::Result<()> {
-        try!(transaction.execute("rargle blargle", &[]));
-        Ok(())
-    }
-    fn down(&self, transaction: &GenericConnection) -> postgres::Result<()> {
-        try!(transaction.execute("rargle blargle", &[]));
-        Ok(())
-    }
-    fn version(&self) -> MigrationVersion {
-        self.version
-    }
-}
-impl Display for BadMigration1 {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        write!(formatter, "{}", self.version)
-    }
-}
+mod types;
 
 /// Connects to the database specified by the TREK_TEST_DB_PARAMS environment variable
 /// and returns a transaction on it.
@@ -168,7 +37,7 @@ fn can_run_migration() {
     let migration_index = MigrationIndex::new(
         vec![Box::new(GoodMigration1::new())]
     );
-    assert!(migration_index.run(&transaction).is_ok());
+    migration_index.run(&transaction).unwrap();
 
     // check that the changes were applied
     let prepared_statement = transaction.prepare("SELECT good_migration_1_ran FROM data;")
@@ -182,8 +51,8 @@ fn can_run_migration() {
     let schema_version = MigrationIndex::schema_version(&transaction).unwrap();
     assert!(schema_version.is_some());
     assert_eq!(
-        schema_version.unwrap().to_string(),
-        "1992-06-02T15:30:00-08:00"
+        schema_version.unwrap(),
+        "GoodMigration1"
     );
 }
 
@@ -194,14 +63,17 @@ fn can_rollback_migration() {
     let migration_index = MigrationIndex::new(
         vec![Box::new(GoodMigration1::new())]
     );
-    assert!(migration_index.run(&transaction).is_ok());
-    assert!(migration_index.rollback(&transaction).is_ok());
+    migration_index.run(&transaction).unwrap();
+    migration_index.rollback(&transaction).unwrap();
+
+    let schema_name_prepared_stmt = transaction.prepare("SELECT current_schema;").unwrap();
+    let schema_name: String = schema_name_prepared_stmt.query(&[]).unwrap().get(0).get(0);
 
     // check that the changes were applied
     let prepared_statement = transaction.prepare(
-            "SELECT table_name FROM information_schema.tables WHERE table_schema='public'; "
+            "SELECT table_name FROM information_schema.tables WHERE table_schema=$1; "
         ).unwrap();
-    let result = prepared_statement.query(&[]).unwrap();
+    let result = prepared_statement.query(&[&schema_name]).unwrap();
     assert_eq!(result.len(), 0);
 
     // check schema version is correct
@@ -218,7 +90,7 @@ fn can_apply_migrations_sequentially() {
             Box::new(GoodMigration2::new()),
         ]
     );
-    assert!(migration_index.run(&transaction).is_ok());
+    migration_index.run(&transaction).unwrap();
 
     // check that the changes were applied
     let prepared_statement = transaction.prepare("SELECT good_migration_2_ran FROM data;")
@@ -232,8 +104,8 @@ fn can_apply_migrations_sequentially() {
     let schema_version = MigrationIndex::schema_version(&transaction).unwrap();
     assert!(schema_version.is_some());
     assert_eq!(
-        schema_version.unwrap().to_string(),
-        "1993-06-02T15:30:00-08:00"
+        schema_version.unwrap(),
+        "GoodMigration2"
     );
 }
 
@@ -247,15 +119,18 @@ fn can_rollback_migrations_sequentially() {
             Box::new(GoodMigration2::new()),
         ]
     );
-    assert!(migration_index.run(&transaction).is_ok());
-    assert!(migration_index.rollback(&transaction).is_ok());
+    migration_index.run(&transaction).unwrap();
+    migration_index.rollback(&transaction).unwrap();
+
+    let schema_name_prepared_stmt = transaction.prepare("SELECT current_schema;").unwrap();
+    let schema_name: String = schema_name_prepared_stmt.query(&[]).unwrap().get(0).get(0);
 
     // check that only the last migration was rolled back
     let prepared_statement = transaction.prepare(
-            "SELECT * FROM information_schema.columns
-            WHERE table_schema = 'public' AND table_name = 'data';"
+            "SELECT column_name FROM information_schema.columns
+            WHERE table_name='data' AND table_schema=$1;"
         ).unwrap();
-    let result = prepared_statement.query(&[]).unwrap();
+    let result = prepared_statement.query(&[&schema_name]).unwrap();
     assert_eq!(result.len(), 1);
 
     let migration_ran: String = result.get(0).get(0);
@@ -263,17 +138,17 @@ fn can_rollback_migrations_sequentially() {
     let schema_version = MigrationIndex::schema_version(&transaction).unwrap();
     assert!(schema_version.is_some());
     assert_eq!(
-        schema_version.unwrap().to_string(),
-        "1992-06-02T15:30:00-08:00"
+        schema_version.unwrap(),
+        "GoodMigration1"
     );
 
     // now all migrations should be rolled back
-    assert!(migration_index.rollback(&transaction).is_ok());
+    migration_index.rollback(&transaction).unwrap();
     let prepared_statement = transaction.prepare(
-            "SELECT table_name FROM information_schema.tables WHERE table_schema='public'; "
+            "SELECT table_name FROM information_schema.tables WHERE table_schema=$1;"
         )
         .unwrap();
-    let result = prepared_statement.query(&[]).unwrap();
+    let result = prepared_statement.query(&[&schema_name]).unwrap();
     assert_eq!(result.len(), 0);
     assert!(MigrationIndex::schema_version(&transaction).unwrap().is_none());
 }
@@ -298,6 +173,6 @@ fn fails_gracefully_on_migration_rollback_error() {
             Box::new(GoodMigrationUpBadMigrationDown::new()),
         ]
     );
-    assert!(migration_index.run(&transaction).is_ok());
+    migration_index.run(&transaction).unwrap();
     assert!(migration_index.rollback(&transaction).is_err());
 }
