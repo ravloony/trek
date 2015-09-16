@@ -127,9 +127,36 @@ impl MigrationIndex {
         };
         let old_migration_index = self.current_index(&old_schema_version).unwrap();
         let old_migration = self.migrations.get(old_migration_index).unwrap();
-        // new_migration will be None if old_migration is the very first migration
-        match self.migrations.get(old_migration_index - 1) {
-            Some(new_migration) => {
+        match old_migration_index {
+            0 => {
+                if let Err(error) = MigrationIndex::update_schema_version(
+                    connection, Some(old_migration.to_string()), None
+                ) {
+                    return Err(Error::new(
+                        format!(
+                            "Failed to update schema version table when rolling back migration {}",
+                            old_migration,
+                        ),
+                        error
+                    ));
+                }
+                if let Err(error) = old_migration.down(connection) {
+                    return Err(Error::new(
+                        format!(
+                            "The down() method of database migration {} failed",
+                            old_migration,
+                        ),
+                        error
+                    ));
+                }
+                println!(
+                    "Rolled back migration {}, database is now empty.",
+                    old_migration
+                );
+                Ok(())
+            },
+            _ => {
+                let new_migration = self.migrations.get(old_migration_index - 1).unwrap();
                 if let Err(error) = MigrationIndex::update_schema_version(
                     connection, Some(old_migration.to_string()), Some(new_migration.to_string())
                 ) {
@@ -154,33 +181,6 @@ impl MigrationIndex {
                     "Rolled back migration {}, database is now at version {}",
                     old_migration,
                     new_migration
-                );
-                Ok(())
-            }
-            None => {
-                if let Err(error) = MigrationIndex::update_schema_version(
-                    connection, Some(old_migration.to_string()), None
-                ) {
-                    return Err(Error::new(
-                        format!(
-                            "Failed to update schema version table when rolling back migration {}",
-                            old_migration,
-                        ),
-                        error
-                    ));
-                }
-                if let Err(error) = old_migration.down(connection) {
-                    return Err(Error::new(
-                        format!(
-                            "The down() method of database migration {} failed",
-                            old_migration,
-                        ),
-                        error
-                    ));
-                }
-                println!(
-                    "Rolled back migration {}, database is now empty.",
-                    old_migration
                 );
                 Ok(())
             }
