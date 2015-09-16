@@ -196,7 +196,7 @@ impl MigrationIndex {
             "SELECT column_name FROM information_schema.columns
             WHERE table_name=$1 LIMIT 1"
         ));
-        let result = try!(prepared_stmt.query(&[&"schema_migrations"]));
+        let result = try!(prepared_stmt.query(&[&"schema_version"]));
         match result.len() {
             0 => Ok(None),
             1 => {
