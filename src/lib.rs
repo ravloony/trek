@@ -39,7 +39,7 @@ pub fn create_migration(name: &str, migrations_dir: &Path) -> io::Result<String>
         let mut file = try!(File::create(final_path));
         try!(file.write_all(migration_template(name, &file_name).as_bytes()));
     }
-    try!(update_migration_index(&file_name, name));
+    try!(update_migration_index(name));
     Ok(file_name)
 }
 
@@ -47,10 +47,11 @@ fn time_prefix() -> String {
     UTC::now().format("%Y%m%d%H%M%S").to_string()
 }
 
-/// Takes a name (e.g. "create_users_table"), a file name (e.g. "20150822_create_users_table.rs"),
-/// and the schema version for a new migration and returns a string that can be written into the
-/// new migration file to fill in all the boilerplate code a migration requires
-fn migration_template(name: &str, file_name: &str) -> String {
+/// Takes a name (e.g. "create_users_table"), a file name (e.g.
+/// "20150822094521_create_users_table.rs"), and the schema version for a new migration and returns
+/// a string that can be written into the new migration file to fill in all the boilerplate code a
+/// migration requires
+fn migration_template(name: &str) -> String {
     // turns "my_migration" into "MyMigration"
     let capitalized_name = name.to_owned().split('_').flat_map(|word|
         word.chars().enumerate().flat_map(|input| {
@@ -68,19 +69,17 @@ fn migration_template(name: &str, file_name: &str) -> String {
 
     format!("\
 use std::fmt::{{self, Display}};
-
 use postgres;
-
-use db::migrations::migration::Migration;
+use trek::migration::Migration;
 
 #[derive(Debug)]
 pub struct {capitalized_name} {{
-    file_name: String,
+    name: String,
 }}
 impl {capitalized_name} {{
     pub fn new() -> Self {{
         {capitalized_name} {{
-            file_name: \"{file_name}\".to_owned()
+            name: \"{name}\".to_owned()
         }}
     }}
 }}
@@ -97,11 +96,11 @@ impl Migration for {capitalized_name} {{
 }}
 impl Display for {capitalized_name} {{
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {{
-        write!(formatter, \"{{}}\", self.file_name)
+        write!(formatter, \"{{}}\", self.name)
     }}
 }}
 ",
-        file_name=file_name,
+        name=name,
         capitalized_name=capitalized_name
     )
 }
