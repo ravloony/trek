@@ -1,4 +1,4 @@
-Trek
+Trek ![Travis build status](https://travis-ci.org/starim/trek.svg?branch=master)
 ==
 
 Database migration management for Rust programs.
