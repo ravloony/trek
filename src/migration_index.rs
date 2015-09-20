@@ -206,7 +206,41 @@ impl MigrationIndex {
     }
 
     /// Takes a queryable connection object and returns the current version of the database's
-    /// schema. Panics if the queries it runs against the database fail.
+    /// schema. No changes are made to the database.
+    ///
+    /// # Panics
+    ///
+    /// If the schema_version table that Trek uses to save a schema's current version has multiple
+    /// columns then this method will panic. It's expected that the schema_version table has only a
+    /// single column named after the last applied migration.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # extern crate postgres;
+    /// # extern crate trek;
+    /// # fn main() {
+    /// # use postgres::{self, Connection, SslMode, Transaction};
+    /// # use trek::migration_index::MigrationIndex;
+    /// # use trek::migration::Migration;
+    /// # fn f() {
+    /// let connection = Connection::connect("server url", &SslMode::None).unwrap();
+    ///
+    /// match MigrationIndex::schema_version(&connection) {
+    ///     Ok(result_option) => {
+    ///         match result_option {
+    ///             Some(name) => println!("Current database version is: {}", name),
+    ///             None => println!("Database is empty, no migrations applied yet.")
+    ///         };
+    ///     },
+    ///     Err(error) => {
+    ///         println!("Error fetching schema version: {}", error);
+    ///     }
+    /// };
+    /// # };
+    /// # }
+    ///
+    /// ```
     pub fn schema_version(
         connection: &GenericConnection
     ) -> postgres::Result<Option<String>> {

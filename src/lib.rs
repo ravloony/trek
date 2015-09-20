@@ -7,15 +7,13 @@ use std::path::Path;
 
 use chrono::UTC;
 
-use error::Error;
-
 pub mod error;
 pub mod migration;
 pub mod migration_index;
 
 
-// A type alias for the result type used by most of the methods in this crate's API.
-pub type Result<T> = std::result::Result<T, Error>;
+/// A type alias for the result type used by most of the methods in this crate's API.
+pub type Result<T> = std::result::Result<T, self::error::Error>;
 
 /// A convenience method that automates creating a new, empty database migration from a name and a
 /// directory where the new migration file should be created.
