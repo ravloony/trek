@@ -18,10 +18,10 @@ example - an example program showing off the trek library's features.
 
 Usage:
   example [-h]
-  example db migrate [-h]
-  example db rollback [-h]
-  example g migration <name> [-h]
-  example generate migration <name> [-h]
+  example trek migrate [-h]
+  example trek rollback [-h]
+  example trek g migration <name> [-h]
+  example trek generate migration <name> [-h]
 
 Options:
   -h --help        Show help text.
@@ -29,7 +29,7 @@ Options:
 
 #[derive(Debug, RustcDecodable)]
 struct Args {
-    cmd_db: bool,
+    cmd_trek: bool,
     cmd_migrate: bool,
     arg_name: String,
     cmd_rollback: bool,
@@ -40,15 +40,15 @@ struct Args {
 
 
 fn should_run_migrations(args: &Args) -> bool {
-    args.cmd_db && args.cmd_migrate
+    args.cmd_trek && args.cmd_migrate
 }
 
 fn should_rollback_migrations(args: &Args) -> bool {
-    args.cmd_db && args.cmd_rollback
+    args.cmd_trek && args.cmd_rollback
 }
 
 fn should_generate_migrations(args: &Args) -> bool {
-    (args.cmd_g || args.cmd_generate) && args.cmd_migration
+    args.cmd_trek && (args.cmd_g || args.cmd_generate) && args.cmd_migration
 }
 
 /// Creates and returns a new database connection, or an error if a connection could not be
