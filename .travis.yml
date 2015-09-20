@@ -1,11 +1,11 @@
 language: rust
 rust:
-  - stable
-  - beta
-  - nightly
+- stable
+- beta
+- nightly
 matrix:
   allow_failures:
-    - rust: nightly
+  - rust: nightly
 sudo: false
 after_success: |
   [ $TRAVIS_BRANCH = master ] &&
@@ -17,3 +17,6 @@ after_success: |
   git push -fq https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages
 before_script:
   - psql -c 'create database trek_test;' -U postgres
+env:
+  global:
+    secure: xHGUYPBIhNyOVnpL/xdBHhJrLuh0nBKhTvmysKpzjUnUiNfmRRAVcq4AKEPGIeIKXEXO0pQLMUDBYyYjT5hXeKFRYdYNUbUDVQTzsTSbGrSzFvkiJtKIzYI2emRPoR5Qj4YWskJspN61+zNhkjzyw3rDiJXsws/9tSZtyyDImuoJL69yExpNDGuOXhqfWkVDOGsXejSGeRBAD1OYSTI2NuQtGND3a6CFgbeceznkv4Wy6FmZR/i894bgtystaCnIkZpPQPv9/edgJNIijTTpSP6AWIGEhrkeS6aWGQcSzd+aUSVvvJI7FPWBbfIHMc1WVf9ONyzMorRsaGTZ27EPPJfCmaGrMblbwG7W0xjetFq7U+tQkUZp2sHlxKN/rs83CrTDfE4Z6/Krap+b0ru42RnR37b34n3i4knsq2iEpmOFW3C3Oj/6HV7DeJgzxcchyOEdRV9+netrbNhdR1QbSGQPFf1XMqVtZGAqXNh4FDvx4qTwx2Qm8hQvYRQeRZucughVBFRmmfiTqw4jod0ZgF/0I0GQbGyNCcWR47A1qIB53SOieoR5bP67a9sFSWmJ8r8k22QebEQKtNlqONu59oGrHmIkq7uSM7m5ZZuhHFbp8yfuR5pUCpn0oCKAmtK7L9xdSw+y7uA6EPbrDFTNU1X2dZ3rQWf2EQgDqoo6jts=
