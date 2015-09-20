@@ -1,9 +1,6 @@
 extern crate chrono;
 extern crate postgres;
 
-pub mod migration;
-pub mod migration_index;
-
 use std::fs::File;
 use std::io::{self, Read, Write};
 use std::path::Path;
@@ -12,7 +9,9 @@ use chrono::UTC;
 
 use error::Error;
 
-mod error;
+pub mod error;
+pub mod migration;
+pub mod migration_index;
 
 
 // A type alias for the result type used by most of the methods in this crate's API.
@@ -37,9 +36,8 @@ pub fn create_migration(name: &str, migrations_dir: &Path) -> io::Result<String>
     let final_path = final_path.as_path();
     {
         let mut file = try!(File::create(final_path));
-        try!(file.write_all(migration_template(name, &file_name).as_bytes()));
+        try!(file.write_all(migration_template(name, &*file_name).as_bytes()));
     }
-    try!(update_migration_index(name));
     Ok(file_name)
 }
 
@@ -51,7 +49,7 @@ fn time_prefix() -> String {
 /// "20150822094521_create_users_table.rs"), and the schema version for a new migration and returns
 /// a string that can be written into the new migration file to fill in all the boilerplate code a
 /// migration requires
-fn migration_template(name: &str) -> String {
+fn migration_template(name: &str, file_name: &str) -> String {
     // turns "my_migration" into "MyMigration"
     let capitalized_name = name.to_owned().split('_').flat_map(|word|
         word.chars().enumerate().flat_map(|input| {
@@ -79,7 +77,7 @@ pub struct {capitalized_name} {{
 impl {capitalized_name} {{
     pub fn new() -> Self {{
         {capitalized_name} {{
-            name: \"{name}\".to_owned()
+            name: \"{file_name}\".to_owned()
         }}
     }}
 }}
@@ -100,7 +98,7 @@ impl Display for {capitalized_name} {{
     }}
 }}
 ",
-        name=name,
+        file_name=file_name,
         capitalized_name=capitalized_name
     )
 }
