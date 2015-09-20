@@ -12,6 +12,10 @@ repository = "https://github.com/starim/trek"
 name = "test"
 path = "tests/test.rs"
 
+[[example]]
+name = "basic_example"
+path = "examples/example.rs"
+
 [dependencies]
 chrono = "0.2.16"
 postgres = "0.9.6"
