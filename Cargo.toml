@@ -5,8 +5,10 @@ authors = ["Brent Houghton <brent@slixbits.com>"]
 description = "Database migration management for Rust programs"
 readme = "readme.md"
 keywords = ["database", "migration"]
-license = "MIT"
+license = "LGPL-3.0"
+homepage = "https://starim.github.io/trek/trek/index.html"
 repository = "https://github.com/starim/trek"
+documentation = "https://starim.github.io/trek/trek/index.html"
 
 [[test]]
 name = "test"
