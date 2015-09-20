@@ -22,22 +22,21 @@ impl Error {
     /// # extern crate postgres;
     /// # extern crate trek;
     /// # fn main() {
-    /// # use postgres::{self, Connection, SslMode};
+    /// # use postgres;
     /// # use postgres::rows::Rows;
     /// # use trek::error::Error;
-    /// # fn f() -> trek::Result<u64> {
-    /// # let connection = Connection::connect("server url", &SslMode::None).unwrap();
-    /// let inventory_query = connection.prepare("query SQL").unwrap();
-    /// match inventory_query.execute(&[]) {
-    ///     Ok(result) => Ok(result),
-    ///     Err(db_error) => {
-    ///         Err(Error::new(
-    ///             "Failed to fetch inventory data".to_owned(),
-    ///             db_error
-    ///         ))
+    /// fn count_inventory(connection: &postgres::Connection) -> trek::Result<u64> {
+    ///     let inventory_query = connection.prepare("query SQL").unwrap();
+    ///     match inventory_query.execute(&[]) {
+    ///         Ok(result) => Ok(result),
+    ///         Err(db_error) => {
+    ///             Err(Error::new(
+    ///                 "Failed to fetch inventory data".to_owned(),
+    ///                 db_error
+    ///             ))
+    ///         }
     ///     }
     /// }
-    /// # }
     /// # }
     /// ```
     pub fn new(message: String, cause: postgres::error::Error) -> Self {
@@ -47,7 +46,7 @@ impl Error {
         }
     }
 
-    /// Wrap a new database error with a message.
+    /// Get the original error.
     ///
     /// # Examples
     ///
@@ -65,7 +64,7 @@ impl Error {
     /// #     Ok(result) => println!("no op"),
     /// #     Err(db_error) => {
     /// let error = Error::new("Failed to fetch inventory data".to_owned(), db_error);
-    /// println!("Ran into a database error of type {}", error.cause());
+    /// println!("Problem communicating with the DB, the low-level error is: {}", error.cause());
     /// # }
     /// # }
     /// # }

@@ -23,8 +23,11 @@ impl MigrationIndex {
         }
     }
 
-    /// Runs all database migrations that haven't yet been applied to the database. Panics if any
-    /// database migration failed or the current schema version can't be determined.
+    /// Runs all database migrations that haven't yet been applied to the database.
+    ///
+    /// # Failures
+    ///
+    /// Returns an error if a problem occurred when communicating with the database.
     ///
     /// # Examples
     ///
@@ -91,8 +94,10 @@ impl MigrationIndex {
     }
 
     /// Rolls back the last database migration that was successfully applied to the database.
-    /// Panics if the migration failed when being rolled back or if the current schema version
-    /// can't be determined.
+    ///
+    /// # Failures
+    ///
+    /// Returns an error if a problem occurred when communicating with the database.
     ///
     /// # Examples
     ///
