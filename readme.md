@@ -6,6 +6,8 @@ Database migration management for Rust programs.
 All code in the `src` folder is licensed under LGPL v3+.
 All code in the `examples` folder is available under the MIT license.
 
+[Documentation](https://starim.github.io/trek/trek/index.html)
+
 
 To use Trek from crates.io in your project, add it as a dependency in your
 `Cargo.toml`:
