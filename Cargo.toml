@@ -13,7 +13,7 @@ name = "test"
 path = "tests/test.rs"
 
 [[example]]
-name = "basic_example"
+name = "example"
 path = "examples/example.rs"
 
 [dependencies]
