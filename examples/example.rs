@@ -153,5 +153,8 @@ fn main() {
                 std::process::exit(1)
             }
         }
+    } else {
+        // your program logic here
+        println!("Run main program");
     }
 }
