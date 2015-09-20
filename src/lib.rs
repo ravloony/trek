@@ -1,3 +1,5 @@
+#![doc(html_root_url = "https://starim.github.io/trek/")]
+
 extern crate chrono;
 extern crate postgres;
 
