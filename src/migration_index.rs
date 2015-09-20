@@ -28,12 +28,18 @@ impl MigrationIndex {
     ///
     /// # Examples
     ///
-    /// ```
-    /// use postgres::{Connection, Transaction};
-    ///
-    /// let connection = try!(Connection::connect("server url", &SslMode::None));
+    /// ```no_run
+    /// # extern crate postgres;
+    /// # extern crate trek;
+    /// # fn main() {
+    /// # use postgres::{self, Connection, SslMode, Transaction};
+    /// # use trek::migration_index::MigrationIndex;
+    /// # use trek::migration::Migration;
+    /// # fn f() -> postgres::Result<()>  {
+    /// let connection = Connection::connect("server url", &SslMode::None).unwrap();
     /// let transaction = connection.transaction().unwrap();
     ///
+    /// # let migration_list: Vec<Box<Migration>> = vec![];
     /// let migrations = MigrationIndex::new(migration_list);
     /// match migrations.run(&transaction) {
     ///     Ok(_) => {
@@ -47,6 +53,9 @@ impl MigrationIndex {
     ///         println!("Error updating database structure: {}", error);
     ///     }
     /// }
+    /// # Ok(())
+    /// # };
+    /// # }
     ///
     /// ```
     pub fn run(&self, connection: &GenericConnection) -> Result<()> {
@@ -87,12 +96,18 @@ impl MigrationIndex {
     ///
     /// # Examples
     ///
-    /// ```
-    /// use postgres::{Connection, Transaction};
-    ///
-    /// let connection = try!(Connection::connect("server url", &SslMode::None));
+    /// ```no_run
+    /// # extern crate postgres;
+    /// # extern crate trek;
+    /// # fn main() {
+    /// # use postgres::{self, Connection, SslMode, Transaction};
+    /// # use trek::migration_index::MigrationIndex;
+    /// # use trek::migration::Migration;
+    /// # fn f() -> postgres::Result<()>  {
+    /// let connection = Connection::connect("server url", &SslMode::None).unwrap();
     /// let transaction = connection.transaction().unwrap();
     ///
+    /// # let migration_list: Vec<Box<Migration>> = vec![];
     /// let migrations = MigrationIndex::new(migration_list);
     /// match migrations.rollback(&transaction) {
     ///     Ok(_) => {
@@ -106,6 +121,9 @@ impl MigrationIndex {
     ///         println!("Error error rolling back last applied migration: {}", error);
     ///     }
     /// }
+    /// # Ok(())
+    /// # };
+    /// # }
     ///
     /// ```
     pub fn rollback(&self, connection: &GenericConnection) -> Result<()> {

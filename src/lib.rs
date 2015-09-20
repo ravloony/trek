@@ -22,10 +22,12 @@ pub type Result<T> = std::result::Result<T, Error>;
 ///
 /// # Examples:
 ///
-/// ```
+/// ```no_run
+/// # use std::path::Path;
+/// # use trek::create_migration;
 /// let migrations_dir = Path::new("src/db/migrations/");
 /// match create_migration("create_users_table", migrations_dir) {
-///     Ok(name) => println!("Created new migration named {}", name)
+///     Ok(name) => println!("Created new migration named {}", name),
 ///     Err(error) => println!("Error creating new database migration: {}", error)
 /// }
 /// ```
