@@ -32,13 +32,14 @@ pub type Result<T> = std::result::Result<T, self::error::Error>;
 /// }
 /// ```
 pub fn create_migration(name: &str, migrations_dir: &Path) -> io::Result<String> {
-    let file_name = format!("migration_{}_{}.rs", time_prefix(), name);
+    let file_name_without_extension = format!("migration_{}_{}", time_prefix(), name);
+    let file_name = file_name_without_extension.clone() + ".rs";
     let mut final_path = migrations_dir.to_path_buf();
     final_path.push(file_name.clone());
     let final_path = final_path.as_path();
     {
         let mut file = try!(File::create(final_path));
-        try!(file.write_all(migration_template(name, &*file_name).as_bytes()));
+        try!(file.write_all(migration_template(name, &*file_name_without_extension).as_bytes()));
     }
     Ok(file_name)
 }
@@ -47,11 +48,11 @@ fn time_prefix() -> String {
     UTC::now().format("%Y%m%d%H%M%S").to_string()
 }
 
-/// Takes a name (e.g. "create_users_table"), a file name (e.g.
-/// "20150822094521_create_users_table.rs"), and the schema version for a new migration and returns
-/// a string that can be written into the new migration file to fill in all the boilerplate code a
+/// Takes a name (e.g. "create_users_table"), a file name without the extension (e.g.
+/// "20150822094521_create_users_table"), and the schema version for a new migration and returns a
+/// string that can be written into the new migration file to fill in all the boilerplate code a
 /// migration requires
-fn migration_template(name: &str, file_name: &str) -> String {
+fn migration_template(name: &str, file_name_without_extension: &str) -> String {
     // turns "my_migration" into "MyMigration"
     let capitalized_name = name.to_owned().split('_').flat_map(|word|
         word.chars().enumerate().flat_map(|input| {
@@ -79,7 +80,7 @@ pub struct {capitalized_name} {{
 impl {capitalized_name} {{
     pub fn new() -> Self {{
         {capitalized_name} {{
-            name: \"{file_name}\".to_owned()
+            name: \"{file_name_without_extension}\".to_owned()
         }}
     }}
 }}
@@ -100,7 +101,7 @@ impl Display for {capitalized_name} {{
     }}
 }}
 ",
-        file_name=file_name,
+        file_name_without_extension=file_name_without_extension,
         capitalized_name=capitalized_name
     )
 }
