@@ -39,7 +39,7 @@ impl MigrationIndex {
     /// # use trek::migration_index::MigrationIndex;
     /// # use trek::migration::Migration;
     /// # fn f() -> postgres::Result<()>  {
-    /// let connection = Connection::connect("server url", &SslMode::None).unwrap();
+    /// let connection = Connection::connect("server url", SslMode::None).unwrap();
     /// let transaction = connection.transaction().unwrap();
     ///
     /// # let migration_list: Vec<Box<Migration>> = vec![];
@@ -109,7 +109,7 @@ impl MigrationIndex {
     /// # use trek::migration_index::MigrationIndex;
     /// # use trek::migration::Migration;
     /// # fn f() -> postgres::Result<()>  {
-    /// let connection = Connection::connect("server url", &SslMode::None).unwrap();
+    /// let connection = Connection::connect("server url", SslMode::None).unwrap();
     /// let transaction = connection.transaction().unwrap();
     ///
     /// # let migration_list: Vec<Box<Migration>> = vec![];
@@ -229,7 +229,7 @@ impl MigrationIndex {
     /// # use trek::migration_index::MigrationIndex;
     /// # use trek::migration::Migration;
     /// # fn f() {
-    /// let connection = Connection::connect("server url", &SslMode::None).unwrap();
+    /// let connection = Connection::connect("server url", SslMode::None).unwrap();
     ///
     /// match MigrationIndex::schema_version(&connection) {
     ///     Ok(result_option) => {
@@ -257,7 +257,7 @@ impl MigrationIndex {
         match result.len() {
             0 => Ok(None),
             1 => {
-                let version_string: String = result.get(0).get_opt(0).unwrap();
+                let version_string: String = try!(result.get(0).get_opt(0).unwrap());
                 Ok(Some(version_string))
             },
             _ => panic!(

@@ -64,7 +64,7 @@ pub fn new_connection() -> Result<Connection, ConnectError> {
             See the rust-postgres documentation for more details:\n\
             https://sfackler.github.io/rust-postgres/doc/postgres/struct.Connection.html#method.connect\n"
         );
-    Connection::connect(&*db_params, &SslMode::None)
+    Connection::connect(&*db_params, SslMode::None)
 }
 
 fn main() {

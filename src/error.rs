@@ -58,7 +58,7 @@ impl Error {
     /// # use postgres::rows::Rows;
     /// # use trek::error::Error;
     /// # fn f() {
-    /// # let connection = Connection::connect("server url", &SslMode::None).unwrap();
+    /// # let connection = Connection::connect("server url", SslMode::None).unwrap();
     /// # let inventory_query = connection.prepare("query SQL").unwrap();
     /// # match inventory_query.execute(&[]) {
     /// #     Ok(result) => println!("no op"),
