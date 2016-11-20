@@ -4,7 +4,7 @@ extern crate trek;
 
 use std::env;
 
-use postgres::{Connection, SslMode};
+use postgres::{Connection, TlsMode};
 
 use trek::migration_index::MigrationIndex;
 
@@ -27,7 +27,7 @@ fn new_test_connection() -> Connection {
             See the rust-postgres documentation for more details:\n\
             https://sfackler.github.io/rust-postgres/doc/postgres/struct.Connection.html#method.connect\n"
         );
-    Connection::connect(&*db_params, SslMode::None).unwrap()
+    Connection::connect(&*db_params, TlsMode::None).unwrap()
 }
 
 #[test]

@@ -35,11 +35,12 @@ impl MigrationIndex {
     /// # extern crate postgres;
     /// # extern crate trek;
     /// # fn main() {
-    /// # use postgres::{self, Connection, SslMode, Transaction};
+    /// # use postgres::{self, Connection, TlsMode};
+    /// # use postgres::transaction::Transaction;
     /// # use trek::migration_index::MigrationIndex;
     /// # use trek::migration::Migration;
     /// # fn f() -> postgres::Result<()>  {
-    /// let connection = Connection::connect("server url", SslMode::None).unwrap();
+    /// let connection = Connection::connect("server url", TlsMode::None).unwrap();
     /// let transaction = connection.transaction().unwrap();
     ///
     /// # let migration_list: Vec<Box<Migration>> = vec![];
@@ -105,11 +106,12 @@ impl MigrationIndex {
     /// # extern crate postgres;
     /// # extern crate trek;
     /// # fn main() {
-    /// # use postgres::{self, Connection, SslMode, Transaction};
+    /// # use postgres::{self, Connection, TlsMode};
+    /// # use postgres::transaction::Transaction;
     /// # use trek::migration_index::MigrationIndex;
     /// # use trek::migration::Migration;
     /// # fn f() -> postgres::Result<()>  {
-    /// let connection = Connection::connect("server url", SslMode::None).unwrap();
+    /// let connection = Connection::connect("server url", TlsMode::None).unwrap();
     /// let transaction = connection.transaction().unwrap();
     ///
     /// # let migration_list: Vec<Box<Migration>> = vec![];
@@ -225,11 +227,12 @@ impl MigrationIndex {
     /// # extern crate postgres;
     /// # extern crate trek;
     /// # fn main() {
-    /// # use postgres::{self, Connection, SslMode, Transaction};
+    /// # use postgres::{self, Connection, TlsMode};
+    /// # use postgres::transaction::Transaction;
     /// # use trek::migration_index::MigrationIndex;
     /// # use trek::migration::Migration;
     /// # fn f() {
-    /// let connection = Connection::connect("server url", SslMode::None).unwrap();
+    /// let connection = Connection::connect("server url", TlsMode::None).unwrap();
     ///
     /// match MigrationIndex::schema_version(&connection) {
     ///     Ok(result_option) => {
