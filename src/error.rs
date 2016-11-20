@@ -54,11 +54,11 @@ impl Error {
     /// # extern crate postgres;
     /// # extern crate trek;
     /// # fn main() {
-    /// # use postgres::{self, Connection, SslMode};
+    /// # use postgres::{self, Connection, TlsMode};
     /// # use postgres::rows::Rows;
     /// # use trek::error::Error;
     /// # fn f() {
-    /// # let connection = Connection::connect("server url", SslMode::None).unwrap();
+    /// # let connection = Connection::connect("server url", TlsMode::None).unwrap();
     /// # let inventory_query = connection.prepare("query SQL").unwrap();
     /// # match inventory_query.execute(&[]) {
     /// #     Ok(result) => println!("no op"),
