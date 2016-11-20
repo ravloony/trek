@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["MigrationIndex","Tracks and manages database migrations for this system."]]});

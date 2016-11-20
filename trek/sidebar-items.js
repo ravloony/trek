@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["create_migration","A convenience method that automates creating a new, empty database migration from a name and a directory where the new migration file should be created."]],"mod":[["error",""],["migration",""],["migration_index",""]],"type":[["Result","A type alias for the result type used by most of the methods in this crate's API."]]});
