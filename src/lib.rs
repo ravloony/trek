@@ -4,7 +4,7 @@ extern crate chrono;
 extern crate postgres;
 
 use std::fs::File;
-use std::io::{self, Read, Write};
+use std::io::{self, Write};
 use std::path::Path;
 
 use chrono::UTC;
